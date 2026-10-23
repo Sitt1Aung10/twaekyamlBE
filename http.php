@@ -24,9 +24,6 @@ function send_json(int $status, array $payload): void
     http_response_code($status);
     header('Content-Type: application/json; charset=utf-8');
     header('Cache-Control: no-store');
-    header('Access-Control-Allow-Origin: http://localhost:5173');
-    header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
-    header('Access-Control-Allow-Headers: Content-Type, Accept');
     echo json_encode($payload, JSON_UNESCAPED_UNICODE);
     exit;
 }
