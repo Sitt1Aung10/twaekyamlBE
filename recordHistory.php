@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-require '/cors.php';
+require __DIR__ . '/cors.php';
 require __DIR__ . '/http.php';
 require __DIR__ . '/db.php';
 
