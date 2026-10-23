@@ -30,7 +30,7 @@ function purge_expired_meetings(): void
 {
     $pdo = db();
     $rooms = $pdo->query(
-        'SELECT room_number FROM meetings WHERE created_at < (NOW() - INTERVAL 7 DAY)'
+        'SELECT room_number FROM meetings WHERE created_at < (NOW() - INTERVAL 90 DAY)'
     )->fetchAll(PDO::FETCH_COLUMN);
 
     foreach ($rooms as $room) {
@@ -41,12 +41,21 @@ function purge_expired_meetings(): void
         'DELETE m FROM meetup_members m
          LEFT JOIN meetings t ON t.room_number = m.room_number
          WHERE t.room_number IS NULL
-           AND m.created_at < (NOW() - INTERVAL 7 DAY)'
+           AND m.created_at < (NOW() - INTERVAL 90 DAY)'
     );
 }
 
 function delete_meeting_room(PDO $pdo, string $room): void
 {
+    $find = $pdo->prepare('SELECT id FROM meetings WHERE room_number = :room LIMIT 1');
+    $find->execute(['room' => $room]);
+    $meetingId = $find->fetchColumn();
+    if ($meetingId !== false) {
+        $votes = $pdo->prepare('DELETE FROM meeting_votes WHERE meeting_id = :meeting');
+        $votes->execute(['meeting' => $meetingId]);
+        $locations = $pdo->prepare('DELETE FROM member_locations WHERE meeting_id = :meeting');
+        $locations->execute(['meeting' => $meetingId]);
+    }
     $members = $pdo->prepare('DELETE FROM meetup_members WHERE room_number = :room');
     $members->execute(['room' => $room]);
     $meeting = $pdo->prepare('DELETE FROM meetings WHERE room_number = :room');
@@ -60,8 +69,9 @@ function load_meeting(string $room): array
 {
     $pdo = db();
     $statement = $pdo->prepare(
-        'SELECT room_number, fixed_place, created_at,
-                (created_at < (NOW() - INTERVAL 7 DAY)) AS expired
+        'SELECT id, room_number, fixed_place, organizer_method, organizer_label, organizer_data,
+                confirmed_date, confirmed_start, confirmed_end, created_at,
+                (created_at < (NOW() - INTERVAL 90 DAY)) AS expired
          FROM meetings
          WHERE room_number = :room
          LIMIT 1'
@@ -94,7 +104,44 @@ function ensure_fixed_place_column(): void
             'ALTER TABLE meetings ADD COLUMN fixed_place VARCHAR(255) NULL AFTER organizer_label'
         );
     }
+    $columns = [
+        'organizer_data' => 'JSON NULL AFTER organizer_label',
+        'confirmed_date' => 'DATE NULL AFTER fixed_place',
+        'confirmed_start' => 'TIME NULL AFTER confirmed_date',
+        'confirmed_end' => 'TIME NULL AFTER confirmed_start',
+    ];
+    foreach ($columns as $name => $definition) {
+        $exists = $pdo->query("SHOW COLUMNS FROM meetings LIKE '" . $name . "'")->fetch();
+        if (!$exists) {
+            $pdo->exec('ALTER TABLE meetings ADD COLUMN ' . $name . ' ' . $definition);
+        }
+    }
+    ensure_meeting_action_tables($pdo);
     $ready = true;
+}
+
+function ensure_meeting_action_tables(PDO $pdo): void
+{
+    $pdo->exec(
+        'CREATE TABLE IF NOT EXISTS meeting_votes (
+            meeting_id INT UNSIGNED NOT NULL,
+            member_id INT UNSIGNED NOT NULL,
+            place VARCHAR(255) NOT NULL,
+            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (meeting_id, member_id),
+            KEY idx_meeting_votes_place (meeting_id, place)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
+    );
+    $pdo->exec(
+        'CREATE TABLE IF NOT EXISTS member_locations (
+            meeting_id INT UNSIGNED NOT NULL,
+            member_id INT UNSIGNED NOT NULL,
+            latitude DECIMAL(10,7) NOT NULL,
+            longitude DECIMAL(10,7) NOT NULL,
+            shared_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (meeting_id, member_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
+    );
 }
 
 function ensure_venue_places(): void

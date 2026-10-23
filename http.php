@@ -110,14 +110,23 @@ function normalize_availability(mixed $value): array|string
         if (!is_array($item)) {
             return 'ရနိုင်သည့် အချိန် ပုံစံ မမှန်ပါ။';
         }
+        $date = (string) ($item['date'] ?? '');
         $day = (string) ($item['day'] ?? '');
-        if (!in_array($day, DAYS, true)) {
+        if ($date !== '') {
+            $parsedDate = DateTimeImmutable::createFromFormat('!Y-m-d', $date);
+            if (!$parsedDate || $parsedDate->format('Y-m-d') !== $date) {
+                return 'နေ့ ရွေးချယ်မှု မမှန်ပါ။';
+            }
+            $key = $date;
+        } elseif (in_array($day, DAYS, true)) {
+            $key = $day;
+        } else {
             return 'နေ့ ရွေးချယ်မှု မမှန်ပါ။';
         }
-        if (isset($seen[$day])) {
+        if (isset($seen[$key])) {
             return 'နေ့တစ်နေ့ကို တစ်ကြိမ်သာ ရွေးပါ။';
         }
-        $seen[$day] = true;
+        $seen[$key] = true;
         $start = normalize_time((string) ($item['start'] ?? ''));
         $end = normalize_time((string) ($item['end'] ?? ''));
         if ($start === '' || $end === '') {
@@ -126,9 +135,11 @@ function normalize_availability(mixed $value): array|string
         if ($start >= $end) {
             return 'ပြီးဆုံးချိန်သည် စတင်ချိန်ထက် နောက်ကျရပါမည်။';
         }
-        $slots[] = ['day' => $day, 'start' => $start, 'end' => $end];
+        $slots[] = $date !== ''
+            ? ['date' => $date, 'start' => $start, 'end' => $end]
+            : ['day' => $day, 'start' => $start, 'end' => $end];
     }
 
-    usort($slots, static fn(array $a, array $b): int => array_search($a['day'], DAYS, true) <=> array_search($b['day'], DAYS, true));
+    usort($slots, static fn(array $a, array $b): int => strcmp((string) ($a['date'] ?? $a['day']), (string) ($b['date'] ?? $b['day'])));
     return $slots;
 }

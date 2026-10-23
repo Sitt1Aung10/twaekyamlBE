@@ -42,6 +42,29 @@ try {
          FROM venue_places
          ORDER BY meetup_style ASC, township_sort ASC, id ASC'
     )->fetchAll();
+    $voteQuery = db()->prepare(
+        'SELECT v.place, COUNT(*) AS count
+         FROM meeting_votes v JOIN meetings t ON t.id = v.meeting_id
+         WHERE t.room_number = :room GROUP BY v.place ORDER BY v.place'
+    );
+    $voteQuery->execute(['room' => $room]);
+    $placeVotes = array_map(static fn(array $vote): array => [
+        'place' => $vote['place'],
+        'count' => (int) $vote['count'],
+    ], $voteQuery->fetchAll());
+    $locations = [];
+    $today = (new DateTimeImmutable('now', new DateTimeZone('Asia/Yangon')))->format('Y-m-d');
+    if (($meetingRow['confirmed_date'] ?? '') === $today) {
+        $locationQuery = db()->prepare(
+            'SELECT m.member_name AS name, l.latitude, l.longitude, l.shared_at AS sharedAt
+             FROM member_locations l
+             JOIN meetings t ON t.id = l.meeting_id
+             JOIN meetup_members m ON m.id = l.member_id
+             WHERE t.room_number = :room ORDER BY l.shared_at ASC'
+        );
+        $locationQuery->execute(['room' => $room]);
+        $locations = $locationQuery->fetchAll();
+    }
 } catch (Throwable $error) {
     send_json(500, ['ok' => false, 'error' => 'ဒေတာဘေ့စ်ကို ဖတ်မရပါ။']);
 }
@@ -51,6 +74,14 @@ send_json(200, [
     'room' => $room,
     'fixedPlace' => clean_text(is_array($meetingRow) ? (string) ($meetingRow['fixed_place'] ?? '') : ''),
     'members' => $members,
+    'placeVotes' => $placeVotes,
+    'confirmedDate' => $meetingRow['confirmed_date'] ?? '',
+    'confirmedSlot' => empty($meetingRow['confirmed_date']) ? null : [
+        'date' => $meetingRow['confirmed_date'],
+        'start' => substr((string) $meetingRow['confirmed_start'], 0, 5),
+        'end' => substr((string) $meetingRow['confirmed_end'], 0, 5),
+    ],
+    'locations' => $locations,
     'places' => array_map(static function (array $row): array {
         return [
             'city' => $row['city'],

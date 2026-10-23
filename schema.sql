@@ -12,11 +12,15 @@ CREATE TABLE IF NOT EXISTS meetings (
   room_number VARCHAR(4) NOT NULL,
   organizer_method VARCHAR(16) NOT NULL,
   organizer_label VARCHAR(160) NOT NULL,
+  organizer_data JSON NULL,
   fixed_place VARCHAR(255) NULL,
+  confirmed_date DATE NULL,
+  confirmed_start TIME NULL,
+  confirmed_end TIME NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   UNIQUE KEY uq_meeting_room (room_number)
-  -- A meeting and its members are deleted 7 days after created_at, which frees room_number.
+  -- A meeting and its members are deleted 90 days after created_at, which frees room_number.
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS meetup_members (
@@ -55,4 +59,23 @@ CREATE TABLE IF NOT EXISTS venue_seed (
   id TINYINT UNSIGNED NOT NULL,
   version INT UNSIGNED NOT NULL,
   PRIMARY KEY (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Vote rows contain only member and place IDs; API responses expose totals only.
+CREATE TABLE IF NOT EXISTS meeting_votes (
+  meeting_id INT UNSIGNED NOT NULL,
+  member_id INT UNSIGNED NOT NULL,
+  place VARCHAR(255) NOT NULL,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (meeting_id, member_id),
+  KEY idx_meeting_votes_place (meeting_id, place)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS member_locations (
+  meeting_id INT UNSIGNED NOT NULL,
+  member_id INT UNSIGNED NOT NULL,
+  latitude DECIMAL(10,7) NOT NULL,
+  longitude DECIMAL(10,7) NOT NULL,
+  shared_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (meeting_id, member_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

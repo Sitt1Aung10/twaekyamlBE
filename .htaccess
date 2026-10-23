@@ -1,0 +1,4 @@
+RewriteEngine On
+
+# Keep the API URL shape used by the frontend while dispatching to PHP.
+RewriteRule ^api(?:/.*)?$ api.php [QSA,L]

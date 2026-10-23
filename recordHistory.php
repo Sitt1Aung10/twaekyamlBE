@@ -64,13 +64,14 @@ function create_meeting(array $data): void
     purge_expired_meetings();
     $code = unique_room($pdo);
     $insert = $pdo->prepare(
-        'INSERT INTO meetings (room_number, organizer_method, organizer_label, fixed_place)
-         VALUES (:room, :method, :label, :place)'
+        'INSERT INTO meetings (room_number, organizer_method, organizer_label, organizer_data, fixed_place)
+         VALUES (:room, :method, :label, :organizer_data, :place)'
     );
     $insert->execute([
         'room' => $code,
         'method' => $method,
         'label' => $label,
+        'organizer_data' => json_encode($organizer, JSON_UNESCAPED_UNICODE),
         'place' => $place === '' ? null : $place,
     ]);
 
