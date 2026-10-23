@@ -1,0 +1,66 @@
+<?php
+declare(strict_types=1);
+
+require __DIR__ . '/http.php';
+require __DIR__ . '/db.php';
+
+allow_cors();
+
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'GET') {
+    send_json(405, ['ok' => false, 'error' => 'GET သာ လက်ခံပါတယ်။']);
+}
+
+$room = normalize_room((string) ($_GET['room'] ?? ''));
+if ($room === '') {
+    send_json(400, ['ok' => false, 'error' => 'အခန်းနံပါတ်သည် အင်္ဂလိပ်အက္ခရာ ၁ လုံးမှ ၄ လုံးအထိ ဖြစ်ရပါမည်။']);
+}
+
+try {
+    ensure_fixed_place_column();
+    ensure_venue_places();
+    $loaded = load_meeting($room);
+    if (!$loaded['ok']) {
+        send_json(404, [
+            'ok' => false,
+            'error' => $loaded['expired']
+                ? 'ဤအခန်းကုဒ် သက်တမ်းကုန်သွားပါပြီ။'
+                : 'ဤအခန်းကုဒ် မရှိသေးပါ။',
+        ]);
+    }
+    $meetingRow = $loaded['meeting'];
+    $statement = db()->prepare(
+        'SELECT id, room_number, member_name, phone, suggest_location, meetup_style,
+                available_time, expected_arrival, created_at, updated_at
+         FROM meetup_members
+         WHERE room_number = :room
+         ORDER BY created_at ASC, id ASC'
+    );
+    $statement->execute(['room' => $room]);
+    $members = $statement->fetchAll();
+    $placeRows = db()->query(
+        'SELECT city, city_mm, township, township_mm, meetup_style, name, address, detail
+         FROM venue_places
+         ORDER BY meetup_style ASC, township_sort ASC, id ASC'
+    )->fetchAll();
+} catch (Throwable $error) {
+    send_json(500, ['ok' => false, 'error' => 'ဒေတာဘေ့စ်ကို ဖတ်မရပါ။']);
+}
+
+send_json(200, [
+    'ok' => true,
+    'room' => $room,
+    'fixedPlace' => clean_text(is_array($meetingRow) ? (string) ($meetingRow['fixed_place'] ?? '') : ''),
+    'members' => $members,
+    'places' => array_map(static function (array $row): array {
+        return [
+            'city' => $row['city'],
+            'cityMm' => $row['city_mm'],
+            'township' => $row['township'],
+            'townshipMm' => $row['township_mm'],
+            'style' => $row['meetup_style'],
+            'name' => $row['name'],
+            'address' => $row['address'],
+            'detail' => $row['detail'],
+        ];
+    }, $placeRows),
+]);
