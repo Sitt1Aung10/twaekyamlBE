@@ -56,7 +56,7 @@ function field(array $data, string ...$keys): string
 function normalize_room(string $value): string
 {
     $room = strtoupper(trim($value));
-    return preg_match('/^[A-Z]{1,4}$/', $room) === 1 ? $room : '';
+    return preg_match('/^[A-Z]{4,5}$/', $room) === 1 ? $room : '';
 }
 
 function normalize_phone(string $value): string

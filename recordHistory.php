@@ -101,7 +101,7 @@ function save_member(array $data): void
     $availability = normalize_availability($data['available_time'] ?? $data['availability'] ?? $data['availableTime'] ?? null);
 
     if ($room === '') {
-        throw new RuntimeException('အခန်းနံပါတ်သည် အင်္ဂလိပ်အက္ခရာ ၁ လုံးမှ ၄ လုံးအထိ ဖြစ်ရပါမည်။');
+        throw new RuntimeException('အခန်းနံပါတ်သည် အင်္ဂလိပ်အက္ခရာ ၄ လုံး သို့မဟုတ် ၅ လုံး ဖြစ်ရပါမည်။');
     }
     if ($name === '') {
         throw new RuntimeException('အမည် ထည့်ပါ။');
@@ -216,7 +216,7 @@ function unique_room(PDO $pdo): string
     );
     for ($attempt = 0; $attempt < 40; $attempt++) {
         $code = '';
-        for ($index = 0; $index < 4; $index++) {
+        for ($index = 0; $index < 5; $index++) {
             $code .= $letters[random_int(0, 25)];
         }
         $check->execute(['meeting_room' => $code, 'member_room' => $code]);

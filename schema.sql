@@ -9,7 +9,7 @@ USE twae_kya_ml;
 
 CREATE TABLE IF NOT EXISTS meetings (
   id INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  room_number VARCHAR(4) NOT NULL,
+  room_number VARCHAR(5) NOT NULL,
   organizer_method VARCHAR(16) NOT NULL,
   organizer_label VARCHAR(160) NOT NULL,
   organizer_data JSON NULL,
@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS meetings (
   confirmed_date DATE NULL,
   confirmed_start TIME NULL,
   confirmed_end TIME NULL,
+  confirmed_place VARCHAR(255) NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   UNIQUE KEY uq_meeting_room (room_number)
@@ -25,7 +26,7 @@ CREATE TABLE IF NOT EXISTS meetings (
 
 CREATE TABLE IF NOT EXISTS meetup_members (
   id INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  room_number VARCHAR(4) NOT NULL,
+  room_number VARCHAR(5) NOT NULL,
   member_name VARCHAR(120) NOT NULL,
   phone VARCHAR(20) NOT NULL,
   suggest_location VARCHAR(255) NOT NULL,

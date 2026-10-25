@@ -17,7 +17,7 @@ try {
     if (preg_match('#^/meetings/?$#', $path) === 1 && $method === 'POST') {
         api_create_meeting($data);
     }
-    if (preg_match('#^/meetings/([A-Za-z]{1,4})(?:/(responses|votes|confirmation|locations))?/?$#', $path, $match) === 1) {
+    if (preg_match('#^/meetings/([A-Za-z]{4,5})(?:/(responses|votes|confirmation|locations))?/?$#', $path, $match) === 1) {
         $room = normalize_room($match[1]);
         $resource = $match[2] ?? '';
         if ($room === '') {
@@ -105,7 +105,7 @@ function api_create_meeting(array $data): never
     $room = '';
     for ($attempt = 0; $attempt < 40; $attempt++) {
         $candidate = '';
-        for ($i = 0; $i < 4; $i++) {
+        for ($i = 0; $i < 5; $i++) {
             $candidate .= $letters[random_int(0, 25)];
         }
         $check->execute(['room_meeting' => $candidate, 'room_member' => $candidate]);

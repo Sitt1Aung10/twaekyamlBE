@@ -12,7 +12,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'GET') {
 
 $room = normalize_room((string) ($_GET['room'] ?? ''));
 if ($room === '') {
-    send_json(400, ['ok' => false, 'error' => 'အခန်းနံပါတ်သည် အင်္ဂလိပ်အက္ခရာ ၁ လုံးမှ ၄ လုံးအထိ ဖြစ်ရပါမည်။']);
+    send_json(400, ['ok' => false, 'error' => 'အခန်းနံပါတ်သည် အင်္ဂလိပ်အက္ခရာ ၄ လုံး သို့မဟုတ် ၅ လုံး ဖြစ်ရပါမည်။']);
 }
 
 try {
